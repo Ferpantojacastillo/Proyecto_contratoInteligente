@@ -1,0 +1,57 @@
+{% extends 'usuarios/base.html' %}
+{% block content %}
+<div class="row">
+  <div class="col-md-4">
+    <div class="card p-3">
+      <h4>Perfil</h4>
+  <p><strong>Usuario:</strong> {% if user.get_full_name %}{{ user.get_full_name }}{% else %}{{ user.username }}{% endif %}</p>
+      <p><strong>Créditos registrados:</strong> {{ total }} / 5</p>
+      <div class="progress mb-2">
+        <div class="progress-bar" role="progressbar" style="width: {{ progreso }}%;" aria-valuenow="{{ progreso }}" aria-valuemin="0" aria-valuemax="100">{{ progreso }}%</div>
+      </div>
+      
+      <h6 class="mt-3">Tus créditos actuales</h6>
+      <ul class="list-group small">
+        {% for cred in creditos %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+              <strong>{{ cred.nombre }}</strong><br>
+              <small class="text-muted">{{ cred.get_tipo_display }} • {{ cred.semestre }}</small>
+              {% if cred.liberado %}
+                <div><span class="badge bg-success mt-1">Disponible</span>
+                {% if cred.firmado_alumno %}<span class="badge bg-info text-dark ms-1">Firmado alumno</span>{% endif %}
+                {% if cred.firmado_admin %}<span class="badge bg-dark ms-1">Firmado admin</span>{% endif %}
+                </div>
+              {% else %}
+                <div><span class="badge bg-warning text-dark mt-1">Pendiente</span></div>
+              {% endif %}
+            </div>
+            <div>
+              <a class="btn btn-sm btn-outline-primary" href="{% url 'contrato' cred.id %}">Contrato</a>
+            </div>
+          </li>
+        {% empty %}
+          <li class="list-group-item">No tienes créditos registrados todavía.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  <div class="col-md-8">
+    <h4>Actividades próximas</h4>
+    <ul class="list-group">
+      {% for act in actividades %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <div>
+            <strong>{{ act.nombre }}</strong> - {{ act.get_tipo_display }}<br>
+            <small class="text-muted">{{ act.fecha }}</small>
+          </div>
+          <a href="{% url 'detalle_actividad' act.id %}" class="btn btn-sm btn-outline-primary">Ver</a>
+        </li>
+      {% empty %}
+        <li class="list-group-item">No hay actividades próximas.</li>
+      {% endfor %}
+    </ul>
+    
+  </div>
+</div>
+{% endblock %}

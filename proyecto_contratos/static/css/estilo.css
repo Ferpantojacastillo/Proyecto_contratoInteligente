@@ -1,0 +1,20 @@
+body {
+  background-color: #fefefe;
+}
+.navbar {
+  border-bottom: 4px solid #ffcc00;
+}
+.btn-primary {
+  background-color: #800020;
+  border: none;
+}
+.btn-primary:hover {
+  background-color: #600016;
+}
+.text-warning {
+  color: #ffcc00 !important;
+}
+.navbar-dark {
+  background-color: #002b5b !important;
+}
+

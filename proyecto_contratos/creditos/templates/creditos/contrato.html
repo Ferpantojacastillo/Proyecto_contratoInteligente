@@ -1,0 +1,30 @@
+{% extends 'usuarios/base.html' %}
+{% block content %}
+<div class="card p-4">
+  <h3>Contrato de Liberación de Crédito</h3>
+  <p><strong>Alumno:</strong> {{ credito.alumno.get_full_name|default:credito.alumno.username }} ({{ credito.alumno.username }})</p>
+  <p><strong>Nombre del crédito:</strong> {{ credito.nombre }}</p>
+  <p><strong>Tipo:</strong> {{ credito.get_tipo_display }}</p>
+  <p><strong>Semestre:</strong> {{ credito.semestre }}</p>
+  <p><strong>Número de control:</strong> {{ credito.numero_control }}</p>
+  <p><strong>Fecha de liberación:</strong> {{ credito.fecha_liberacion|default:"-" }}</p>
+  <hr>
+  <p>Firmas:</p>
+  <ul>
+    <li>Administrador firmado: {% if credito.firmado_admin %}✅ Sí{% else %}❌ No{% endif %}</li>
+    <li>Alumno firmado: {% if credito.firmado_alumno %}✅ Sí{% else %}❌ No{% endif %}</li>
+  </ul>
+
+  <div class="d-flex gap-2 mt-3">
+    {% if not credito.firmado_alumno and credito.liberado and credito.alumno == user %}
+      <a href="{% url 'firmar_por_alumno' credito.id %}" class="btn btn-primary">Firmar (Alumno)</a>
+    {% endif %}
+    {% if not credito.firmado_admin and credito.liberado %}
+      {% if user.is_staff or user.es_admin_creditos %}
+        <a href="{% url 'firmar_por_admin' credito.id %}" class="btn btn-warning">Firmar (Admin)</a>
+      {% endif %}
+    {% endif %}
+    <a href="{% url 'mis_creditos' %}" class="btn btn-secondary">Volver</a>
+  </div>
+</div>
+{% endblock %}

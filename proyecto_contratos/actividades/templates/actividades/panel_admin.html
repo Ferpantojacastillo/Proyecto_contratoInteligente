@@ -1,0 +1,48 @@
+{% extends 'actividades/admin_base.html' %}
+
+{% block title %}Panel Actividades - Admin{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center">
+  <h2 class="text-danger">Panel Actividades</h2>
+  <a class="btn btn-warning" href="{% url 'registrar_actividad' %}">+ Nueva actividad</a>
+</div>
+
+<table class="table mt-3">
+  <thead>
+    <tr>
+      <th>Nombre</th>
+      <th>Tipo</th>
+      <th>Fecha</th>
+      <th>Inscritos</th>
+      <th>Acciones</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for act in actividades %}
+      <tr>
+        <td>{{ act.nombre }}</td>
+        <td>{{ act.get_tipo_display }}</td>
+        <td>{{ act.fecha }}</td>
+        <td>
+          {% for u in act.inscritos.all %}
+            <div>{{ u.username }} 
+              <a class="btn btn-sm btn-outline-success" href="{% url 'registrar_credito' act.id u.id %}">Registrar crédito</a>
+            </div>
+          {% empty %}
+            <span class="text-muted">Sin inscritos</span>
+          {% endfor %}
+        </td>
+        <td class="d-flex gap-1">
+          <a href="{% url 'detalle_actividad' act.id %}" class="btn btn-sm btn-primary">Ver</a>
+          {% if act.liberado %}
+            <a href="{% url 'liberar_actividad' act.id %}" class="btn btn-sm btn-outline-danger">Desmarcar disponible</a>
+          {% else %}
+            <a href="{% url 'liberar_actividad' act.id %}" class="btn btn-sm btn-success">Marcar disponible</a>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

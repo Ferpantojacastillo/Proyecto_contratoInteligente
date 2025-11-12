@@ -1,0 +1,59 @@
+{% extends 'usuarios/base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h3 class="text-primary mb-0">Créditos</h3>
+  {% if user.is_staff or user.es_admin_creditos %}
+  <a href="{% url 'crear_credito' %}" class="btn btn-primary">
+    <i class="bi bi-plus-circle"></i> Añadir Crédito
+  </a>
+  {% endif %}
+</div>
+<table class="table table-bordered table-striped">
+  <thead class="table-primary">
+    <tr>
+      <th>Nombre</th>
+      <th>Tipo</th>
+      <th>Semestre</th>
+      <th>Fecha Liberación</th>
+      <th>Firmado</th>
+      <th></th>
+      
+    </tr>
+  </thead>
+  <tbody>
+    {% for c in creditos %}
+    <tr>
+      <td>{{ c.nombre }}</td>
+      <td>{{ c.get_tipo_display }}</td>
+      <td>{{ c.semestre }}</td>
+      <td>{{ c.fecha_liberacion|default:"-" }}</td>
+      <td>
+        {% if c.liberado %}
+          ✅ Disponible
+        {% else %}
+          ⏳ Pendiente
+        {% endif %}
+        <div>
+          Admin: {% if c.firmado_admin %}✅{% else %}❌{% endif %} — Alumno: {% if c.firmado_alumno %}✅{% else %}❌{% endif %}
+        </div>
+      </td>
+      <td>
+        {% if c.liberado %}
+          <a href="{% url 'contrato' c.id %}" class="btn btn-sm btn-primary">Ver Contrato</a>
+          {% if not c.firmado_alumno and c.alumno == user %}
+            <a href="{% url 'firmar_por_alumno' c.id %}" class="btn btn-sm btn-warning">Firmar (Alumno)</a>
+          {% endif %}
+          {% if not c.firmado_admin %}
+            {% if user.is_staff or user.es_admin_creditos %}
+              <a href="{% url 'firmar_por_admin' c.id %}" class="btn btn-sm btn-danger">Firmar (Admin)</a>
+            {% endif %}
+          {% endif %}
+        {% else %}
+          <span class="text-muted">Sin contrato</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
