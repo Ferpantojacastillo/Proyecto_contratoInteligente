@@ -31,18 +31,18 @@ class UsuarioAdminForm(forms.ModelForm):
         pwd_manual = self.cleaned_data.get('docente_password_plain')
         generar = self.cleaned_data.get('generar_docente_password')
 
-        # Si se generará automáticamente, ignoramos cualquier contraseña manual
+       
         if generar:
             pwd_manual = None
 
-        # Si el admin escribió una contraseña manual
+       
         if pwd_manual:
             user.set_docente_password(pwd_manual)
 
         if commit:
             user.save()
 
-        # Limpiar los campos del formulario después de guardar
+
         self.cleaned_data['docente_password_plain'] = ''
         self.cleaned_data['generar_docente_password'] = False
 
@@ -92,18 +92,18 @@ class CustomUserAdmin(UserAdmin):
         generar = form.cleaned_data.get('generar_docente_password')
         generated_pwd = None
 
-        # Si el admin marcó generar contraseña automática
+        
         if generar and obj.es_docente:
             generated_pwd = get_random_string(12)
             obj.set_docente_password(generated_pwd)
 
         super().save_model(request, obj, form, change)
 
-        # Mostrar la contraseña generada solo una vez
+       
         if generated_pwd:
             messages.success(request, f'Contraseña docente generada: {generated_pwd} (cópiala ahora, se mostrará solo una vez).')
 
-            # Intentar enviar correo si el docente tiene email
+           
             if obj.email:
                 subject = 'Acceso al Portal Docente'
                 login_url = getattr(settings, 'SITE_URL', '') + '/login/'

@@ -69,7 +69,7 @@ def registro(request):
 
 
 def docente_registro(request):
-    # Registro exclusivo para docentes mediante invite code
+    
     if request.method == 'POST':
         form = DocenteRegistroForm(request.POST)
         if form.is_valid():

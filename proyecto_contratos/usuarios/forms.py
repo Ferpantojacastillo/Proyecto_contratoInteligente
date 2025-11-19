@@ -108,11 +108,11 @@ class DocenteRegistroForm(RegistroForm):
 
     def save(self, commit=True):
         user = super().save(commit=False)
-        # marcar como docente
+     
         user.es_docente = True
-        # asignar la contraseña docente (hasheada)
+    
         user.set_docente_password(self.cleaned_data['docente_password1'])
-        # opcional: evitar contraseña normal para login estándar
+
         user.set_unusable_password()
         if commit:
             user.save()
