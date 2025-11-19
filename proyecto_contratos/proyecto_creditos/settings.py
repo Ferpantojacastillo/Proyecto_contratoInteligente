@@ -102,3 +102,6 @@ LOGIN_REDIRECT_URL = '/inicio/'
 LOGOUT_REDIRECT_URL = '/login/'
 LOGIN_URL = '/login/'
 
+# Código secreto para registro de docentes (cámbialo en producción)
+DOCENTE_INVITE_CODE = 'CAMBIA-ESTE-CODIGO'
+

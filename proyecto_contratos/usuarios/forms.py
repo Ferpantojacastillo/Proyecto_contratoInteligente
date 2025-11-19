@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm
 from .models import Usuario
+from django.conf import settings
 
 class RegistroForm(forms.ModelForm):
     password1 = forms.CharField(
@@ -71,3 +72,48 @@ class LoginForm(AuthenticationForm):
         widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Contraseña'}),
         label='Contraseña'
     )
+
+
+class DocenteRegistroForm(RegistroForm):
+    docente_password1 = forms.CharField(
+        label='Contraseña docente',
+        widget=forms.PasswordInput(attrs={'class': 'form-control'})
+    )
+    docente_password2 = forms.CharField(
+        label='Confirmar contraseña docente',
+        widget=forms.PasswordInput(attrs={'class': 'form-control'})
+    )
+    invite_code = forms.CharField(
+        label='Código de registro docente',
+        widget=forms.TextInput(attrs={'class': 'form-control'}),
+        help_text='Introduce el código que te proporcionó el administrador.'
+    )
+
+    class Meta(RegistroForm.Meta):
+        fields = ['username', 'email', 'numero_control']
+
+    def clean(self):
+        cleaned = super().clean()
+        dp1 = cleaned.get('docente_password1')
+        dp2 = cleaned.get('docente_password2')
+        invite = cleaned.get('invite_code')
+
+        if not invite or invite != getattr(settings, 'DOCENTE_INVITE_CODE', None):
+            raise forms.ValidationError('Código de registro docente inválido.')
+
+        if not dp1 or not dp2 or dp1 != dp2:
+            raise forms.ValidationError('Las contraseñas docentes no coinciden.')
+
+        return cleaned
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        # marcar como docente
+        user.es_docente = True
+        # asignar la contraseña docente (hasheada)
+        user.set_docente_password(self.cleaned_data['docente_password1'])
+        # opcional: evitar contraseña normal para login estándar
+        user.set_unusable_password()
+        if commit:
+            user.save()
+        return user

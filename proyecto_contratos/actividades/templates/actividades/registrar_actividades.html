@@ -40,10 +40,11 @@
                 </div>
 
                 <div class="mb-3">
-                    <label for="{{ form.encargado.id_for_label }}" class="form-label">Encargado (maestro)</label>
-                    {{ form.encargado }}
-                    {% if form.encargado.errors %}
-                        <div class="alert alert-danger mt-2">{{ form.encargado.errors }}</div>
+                    <label for="{{ form.encargado_manual.id_for_label }}" class="form-label">Encargado (maestro)</label>
+                    {{ form.encargado_manual }}
+                    <div class="form-text">Escribe el nombre del maestro. Si no existe, se creará un usuario con ese nombre.</div>
+                    {% if form.encargado_manual.errors %}
+                        <div class="alert alert-danger mt-2">{{ form.encargado_manual.errors }}</div>
                     {% endif %}
                 </div>
 
@@ -73,13 +74,10 @@
                     </div>
                 </div>
 
-                <div class="d-flex gap-2">
+                <div>
                     <button type="submit" class="btn btn-primary">
                         <i class="bi bi-check-circle"></i> Guardar Actividad
                     </button>
-                    <a href="{% url 'lista_actividades' %}" class="btn btn-secondary">
-                        <i class="bi bi-x-circle"></i> Cancelar
-                    </a>
                 </div>
             </form>
         </div>

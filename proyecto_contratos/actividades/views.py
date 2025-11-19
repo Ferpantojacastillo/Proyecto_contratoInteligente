@@ -52,6 +52,27 @@ def registrar_actividad(request):
         form = ActividadForm(request.POST)
         if form.is_valid():
             actividad = form.save(commit=False)
+
+            encargado_manual = form.cleaned_data.get('encargado_manual', '').strip()
+            if encargado_manual:
+                
+                posible = Usuario.objects.filter(username__iexact=encargado_manual).first()
+                if not posible:
+                    posible = Usuario.objects.filter(username__icontains=encargado_manual).first()
+
+                if posible:
+                    actividad.encargado = posible
+                else:
+                    
+                    try:
+                        nuevo = Usuario(username=encargado_manual, es_alumno=False)
+                        nuevo.set_unusable_password()
+                        nuevo.save()
+                        actividad.encargado = nuevo
+                        messages.info(request, f"Se creó el usuario '{encargado_manual}' como encargado.")
+                    except Exception as e:
+                        messages.error(request, f"No se pudo crear el usuario encargado: {e}")
+
             actividad.creado_por = request.user
             actividad.save()
             messages.success(request, "Actividad registrada correctamente.")
@@ -120,4 +141,23 @@ def liberar_actividad(request, id_actividad):
 
     actividad.save()
     return redirect(request.META.get('HTTP_REFERER', 'panel_actividades'))
+
+
+@login_required
+def eliminar_actividad(request, id_actividad):
+    actividad = get_object_or_404(Actividad, id=id_actividad)
+
+    
+    if not (es_admin(request.user) or request.user == actividad.creado_por or request.user == actividad.encargado):
+        messages.error(request, "No tienes permiso para eliminar esta actividad.")
+        return redirect('panel_actividades')
+
+    if request.method == 'POST':
+        nombre = actividad.nombre
+        actividad.delete()
+        messages.success(request, f"Actividad '{nombre}' eliminada correctamente.")
+        return redirect('panel_actividades')
+
+
+    return redirect('panel_actividades')
 

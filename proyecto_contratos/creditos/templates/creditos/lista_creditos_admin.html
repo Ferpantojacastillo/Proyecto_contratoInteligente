@@ -1,16 +1,8 @@
-{% load static %}
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lista de Créditos - Admin</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="bg-light">
-
-<div class="container mt-5">
-    <h2 class="mb-4">Créditos (Administrador)</h2>
+{% extends 'usuarios/base.html' %}
+{% block title %}Lista de Créditos - Admin{% endblock %}
+{% block content %}
+<div class="container mt-2">
+    <h2 class="page-title mb-4">Créditos (Administrador)</h2>
     <table class="table table-striped">
         <thead>
             <tr>
@@ -21,6 +13,8 @@
                 <th>Alumno</th>
                 <th>Numero control</th>
                 <th>Disponible</th>
+                <th>Firmado Admin</th>
+                <th>Firmado Docente</th>
                 <th>Acciones</th>
             </tr>
         </thead>
@@ -35,8 +29,28 @@
                 <td>{{ c.numero_control }}</td>
                 <td>{% if c.liberado %}Disponible ({{ c.fecha_liberacion }}){% else %}No{% endif %}</td>
                 <td>
+                    {% if c.firmado_admin %}
+                        Sí
+                        {% if c.firmado_admin_por %}- por {{ c.firmado_admin_por.username }} en {{ c.firmado_admin_en|date:"Y-m-d H:i" }}{% endif %}
+                    {% else %}
+                        No
+                    {% endif %}
+                </td>
+                <td>
+                    {% if c.firmado_docente %}
+                        Sí
+                        {% if c.firmado_docente_por %}- por {{ c.firmado_docente_por.username }} en {{ c.firmado_docente_en|date:"Y-m-d H:i" }}{% endif %}
+                    {% else %}
+                        No
+                    {% endif %}
+                </td>
+                <td>
                     <a href="{% url 'asignar_credito' c.id %}" class="btn btn-sm btn-primary">Asignar / Liberar</a>
                     <a href="{% url 'contrato' c.id %}" class="btn btn-sm btn-secondary">Ver contrato</a>
+                    <form method="post" action="{% url 'eliminar_credito' c.id %}" class="d-inline" onsubmit="return confirm('¿Eliminar crédito ID {{ c.id }}? Esta acción no se puede deshacer.');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-danger">Eliminar</button>
+                    </form>
                 </td>
             </tr>
         {% empty %}
@@ -44,8 +58,6 @@
         {% endfor %}
         </tbody>
     </table>
-    <a href="{% url 'panel_creditos' %}" class="btn btn-outline-secondary">Volver al panel</a>
+    <a href="{% url 'panel_creditos' %}" class="btn btn-secondary">Volver al panel</a>
 </div>
-
-</body>
-</html>
+{% endblock %}

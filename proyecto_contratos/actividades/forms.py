@@ -1,8 +1,10 @@
 from django import forms
 from .models import Actividad
+from usuarios.models import Usuario
 
 class ActividadForm(forms.ModelForm):
     fecha = forms.DateTimeField(widget=forms.DateTimeInput(attrs={'type':'datetime-local'}))
+    encargado_manual = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre del maestro (si no existe, se creará)'}))
     
     class Meta:
         model = Actividad
@@ -17,3 +19,13 @@ class ActividadForm(forms.ModelForm):
             'creditos_equivalentes': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
             'encargado': forms.Select(attrs={'class': 'form-select'}),
         }
+        
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+      
+        try:
+            self.fields['encargado'].queryset = Usuario.objects.none()
+           
+            self.fields['encargado'].empty_label = '---'
+        except Exception:
+            pass

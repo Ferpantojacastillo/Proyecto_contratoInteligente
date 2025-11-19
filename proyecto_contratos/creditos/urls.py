@@ -16,6 +16,11 @@ urlpatterns = [
         path('contrato/<int:id_credito>/', views.contrato, name='contrato'),
     path('admin/lista/', views.lista_creditos_admin, name='lista_creditos_admin'),
     path('admin/asignar/<int:id_credito>/', views.asignar_credito, name='asignar_credito'),
+    path('admin/eliminar/<int:id_credito>/', views.eliminar_credito, name='eliminar_credito'),
+    path('docente/', views.lista_creditos_docente, name='lista_creditos_docente'),
+    path('docente/firmar/<int:id_credito>/', views.firmar_por_docente, name='firmar_por_docente'),
+    path('docente/login/', views.docente_login, name='docente_login'),
+    path('docente/dashboard/', views.docente_dashboard, name='docente_dashboard'),
 ]
 
 

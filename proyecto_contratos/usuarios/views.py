@@ -3,6 +3,8 @@ from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from .forms import RegistroForm, LoginForm
+from .forms import DocenteRegistroForm
+from django.conf import settings
 from creditos.models import Credito
 from actividades.models import Actividad
 from django.db.models import Q
@@ -64,6 +66,19 @@ def registro(request):
     else:
         form = RegistroForm()
     return render(request, 'usuarios/registro.html', {'form': form})
+
+
+def docente_registro(request):
+    # Registro exclusivo para docentes mediante invite code
+    if request.method == 'POST':
+        form = DocenteRegistroForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Registro de docente exitoso. Ahora puedes acceder al portal docente.')
+            return redirect('docente_login')
+    else:
+        form = DocenteRegistroForm()
+    return render(request, 'usuarios/docente_registro.html', {'form': form})
 
 
 

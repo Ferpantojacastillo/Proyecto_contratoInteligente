@@ -11,8 +11,15 @@
   <hr>
   <p>Firmas:</p>
   <ul>
-    <li>Administrador firmado: {% if credito.firmado_admin %}✅ Sí{% else %}❌ No{% endif %}</li>
-    <li>Alumno firmado: {% if credito.firmado_alumno %}✅ Sí{% else %}❌ No{% endif %}</li>
+    <li>Administrador firmado: {% if credito.firmado_admin %}✅ Sí{% else %}❌ No{% endif %}
+        {% if credito.firmado_admin_por %}- por {{ credito.firmado_admin_por.username }} en {{ credito.firmado_admin_en|date:"Y-m-d H:i" }}{% endif %}
+    </li>
+    <li>Docente firmado: {% if credito.firmado_docente %}✅ Sí{% else %}❌ No{% endif %}
+        {% if credito.firmado_docente_por %}- por {{ credito.firmado_docente_por.username }} en {{ credito.firmado_docente_en|date:"Y-m-d H:i" }}{% endif %}
+    </li>
+    <li>Alumno firmado: {% if credito.firmado_alumno %}✅ Sí{% else %}❌ No{% endif %}
+        {% if credito.firmado_alumno_por %}- por {{ credito.firmado_alumno_por.username }} en {{ credito.firmado_alumno_en|date:"Y-m-d H:i" }}{% endif %}
+    </li>
   </ul>
 
   <div class="d-flex gap-2 mt-3">

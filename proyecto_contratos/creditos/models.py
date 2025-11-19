@@ -17,6 +17,13 @@ class Credito(models.Model):
     liberado = models.BooleanField(default=False)
     firmado_alumno = models.BooleanField(default=False)
     firmado_admin = models.BooleanField(default=False)
+    firmado_docente = models.BooleanField(default=False)
+    firmado_admin_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, blank=True, related_name='creditos_firmados_admin')
+    firmado_admin_en = models.DateTimeField(null=True, blank=True)
+    firmado_docente_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, blank=True, related_name='creditos_firmados_docente')
+    firmado_docente_en = models.DateTimeField(null=True, blank=True)
+    firmado_alumno_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, blank=True, related_name='creditos_firmados_alumno')
+    firmado_alumno_en = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.nombre} - {self.alumno.username} - {self.tipo} ({'Liberado' if self.liberado else 'Pendiente'})"

@@ -40,6 +40,10 @@
           {% else %}
             <a href="{% url 'liberar_actividad' act.id %}" class="btn btn-sm btn-success">Marcar disponible</a>
           {% endif %}
+          <form method="post" action="{% url 'eliminar_actividad' act.id %}" class="d-inline" onsubmit="return confirm('¿Eliminar actividad {{ act.nombre }}? Esta acción no se puede deshacer.');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-danger">Eliminar</button>
+          </form>
         </td>
       </tr>
     {% endfor %}

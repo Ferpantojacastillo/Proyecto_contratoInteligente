@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="40" viewBox="0 0 320 80">
+  <defs>
+    <linearGradient id="g" x1="0" x2="1">
+      <stop offset="0" stop-color="#0033a0"/>
+      <stop offset="1" stop-color="#00297a"/>
+    </linearGradient>
+  </defs>
+  <rect width="320" height="80" fill="none" />
+  <text x="8" y="54" font-family="Poppins, Arial, sans-serif" font-size="38" font-weight="700" fill="url(#g)">Créditos</text>
+  <circle cx="290" cy="40" r="18" fill="#ffcc00" />
+  <text x="283" y="46" font-family="Poppins, Arial, sans-serif" font-size="18" font-weight="700" fill="#0033a0">C</text>
+</svg>

@@ -1,0 +1,38 @@
+{% extends 'usuarios/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container">
+  <h2>Registro Docente</h2>
+  <p>Este formulario es solo para docentes. Debes tener el código de registro que te proporcionó el administrador.</p>
+  <form method="post" class="mt-3">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <div class="mb-3">
+      <label class="form-label">Nombre completo</label>
+      {{ form.username }}
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Correo electrónico</label>
+      {{ form.email }}
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Número de control (opcional)</label>
+      {{ form.numero_control }}
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Contraseña docente</label>
+      {{ form.docente_password1 }}
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Confirmar contraseña docente</label>
+      {{ form.docente_password2 }}
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Código de registro docente</label>
+      {{ form.invite_code }}
+    </div>
+    <button class="btn btn-primary">Registrarme como docente</button>
+  </form>
+</div>
+{% endblock %}

@@ -1,12 +1,6 @@
-{% load static %}
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="utf-8">
-  <title>{{ actividad.nombre }}</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="bg-light">
+{% extends 'usuarios/base.html' %}
+{% block title %}{{ actividad.nombre }}{% endblock %}
+{% block content %}
 <div class="container mt-4">
   <a class="btn btn-secondary mb-3" href="{% url 'lista_actividades' %}">Volver</a>
   <div class="card">
@@ -31,6 +25,10 @@
             {% else %}
               <a href="{% url 'liberar_actividad' actividad.id %}" class="btn btn-sm btn-success">Marcar disponible</a>
             {% endif %}
+            <form method="post" action="{% url 'eliminar_actividad' actividad.id %}" class="d-inline ms-2" onsubmit="return confirm('¿Eliminar esta actividad? Esta acción no se puede deshacer.');">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-danger">Eliminar actividad</button>
+            </form>
           </div>
         {% endif %}
       {% endif %}
@@ -46,5 +44,4 @@
     </div>
   </div>
 </div>
-</body>
-</html>
+{% endblock %}

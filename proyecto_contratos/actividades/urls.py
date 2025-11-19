@@ -21,6 +21,7 @@ urlpatterns = [
     path('<int:id_actividad>/registrar_credito/<int:id_usuario>/', views.registrar_credito, name='registrar_credito'),
     
     path('<int:id_actividad>/liberar/', views.liberar_actividad, name='liberar_actividad'),
+    path('<int:id_actividad>/eliminar/', views.eliminar_actividad, name='eliminar_actividad'),
 ]
 
 

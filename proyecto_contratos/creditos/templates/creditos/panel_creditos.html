@@ -1,12 +1,12 @@
-{% extends 'actividades/admin_base.html' %}
+{% extends 'usuarios/base.html' %}
 
 {% block title %}Panel de Créditos - Administrador{% endblock %}
 
 {% block content %}
-<h2 class="text-center fw-bold text-danger mb-4">Liberar Créditos</h2>
+<h2 class="page-title mb-4">Liberar Créditos</h2>
 <div class="d-flex justify-content-between align-items-center mb-4">
   <div></div>
-  <a href="{% url 'crear_credito' %}" class="btn btn-success">+ Añadir Crédito</a>
+  <a href="{% url 'crear_credito' %}" class="btn btn-primary">+ Añadir Crédito</a>
 </div>
 
 <div class="table-responsive">
@@ -35,6 +35,10 @@
           </td>
           <td>
             <a href="{% url 'asignar_credito' credito.id %}" class="btn btn-sm btn-primary">Asignar</a>
+            <form method="post" action="{% url 'eliminar_credito' credito.id %}" class="d-inline ms-1" onsubmit="return confirm('¿Eliminar crédito "{{ credito.nombre }}"? Esta acción no se puede deshacer.');">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-danger">Eliminar</button>
+            </form>
           </td>
         </tr>
       {% empty %}
