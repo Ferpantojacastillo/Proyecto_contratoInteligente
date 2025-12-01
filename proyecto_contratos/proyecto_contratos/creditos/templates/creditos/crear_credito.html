@@ -1,0 +1,82 @@
+{% extends 'usuarios/base.html' %}
+{% block content %}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <h3 class="text-primary mb-4">Crear Nuevo Crédito</h3>
+
+            <form method="POST">
+                {% csrf_token %}
+
+                <!-- Selección del alumno -->
+                <div class="mb-3">
+                    <label class="form-label">Alumno</label>
+                    <select class="form-select" id="alumno" name="alumno_id" required>
+                        <option value="">Selecciona un alumno</option>
+                        {% for u in usuarios %}
+                            <option value="{{ u.id }}" data-nc="{{ u.numero_control }}">
+                                {{ u.username }} - {{ u.numero_control }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Número de control autollenado -->
+                <div class="mb-3">
+                    <label for="numero_control" class="form-label">Número de control</label>
+                    <input type="text" id="numero_control" class="form-control" name="numero_control" readonly>
+                </div>
+
+                <!-- Combo de actividades -->
+                <div class="mb-3">
+                    <label class="form-label">Actividad</label>
+                    <select class="form-select" id="actividad" name="actividad_id">
+                        <option value="">-- Seleccionar actividad --</option>
+                        {% for a in actividades %}
+                            <option value="{{ a.id }}">{{ a.nombre }}{% if a.convo %} - {{ a.convo }}{% endif %}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                
+
+                <!-- Tipo -->
+                <div class="mb-3">
+                    <label class="form-label">Tipo de Crédito</label>
+                    <select class="form-control" name="tipo" required>
+                        <option value="">Selecciona un tipo</option>
+                        <option value="academico">Académico</option>
+                        <option value="cultural">Cultural</option>
+                        <option value="deportivo">Deportivo</option>
+                    </select>
+                </div>
+
+                <!-- Semestre -->
+                <div class="mb-3">
+                    <label class="form-label">Semestre</label>
+                    <input type="text" class="form-control" name="semestre" placeholder="Ej: 1, 2, 3..." required>
+                </div>
+
+                <!-- Fecha de liberación -->
+                <div class="mb-3">
+                    <label class="form-label">Fecha de liberación (opcional)</label>
+                    <input type="date" class="form-control" name="fecha_liberacion">
+                </div>
+
+                <button class="btn btn-primary" type="submit">Crear Crédito</button>
+                <a href="{% url 'mis_creditos' %}" class="btn btn-secondary">Cancelar</a>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById("alumno").addEventListener("change", function() {
+    const nc = this.options[this.selectedIndex].getAttribute("data-nc");
+    document.getElementById("numero_control").value = nc;
+});
+</script>
+
+{% endblock %}
+

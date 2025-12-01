@@ -1,0 +1,79 @@
+{% extends 'usuarios/base.html' %}
+
+{% block title %}Credenciales Docente{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <div class="alert alert-success" role="alert">
+        <h4 class="alert-heading">¡Registro Exitoso!</h4>
+        <p>Tu cuenta de docente ha sido creada exitosamente. A continuación se muestran tus credenciales de acceso.</p>
+      </div>
+
+      <div class="card mt-4">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0">Credenciales de Acceso al Portal Docente</h5>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label"><strong>Usuario:</strong></label>
+            <div class="input-group">
+              <input type="text" class="form-control" value="{{ username }}" readonly>
+              <button class="btn btn-outline-secondary" type="button" onclick="copiarAlPortapapeles('{{ username }}')">Copiar</button>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label"><strong>Contraseña:</strong></label>
+            <div class="input-group">
+              <input type="password" class="form-control" id="passwordInput" value="{{ password }}" readonly>
+              <button class="btn btn-outline-secondary" type="button" onclick="mostrarOcultarPassword()">Mostrar</button>
+              <button class="btn btn-outline-secondary" type="button" onclick="copiarAlPortapapeles('{{ password }}')">Copiar</button>
+            </div>
+          </div>
+
+          {% if email %}
+          <div class="alert alert-info mt-3">
+            <strong>Nota:</strong> Se ha enviado un correo de confirmación a <strong>{{ email }}</strong> con tus credenciales.
+          </div>
+          {% endif %}
+
+          <div class="alert alert-warning mt-3">
+            <strong>Importante:</strong> 
+            <ul class="mb-0 mt-2">
+              <li>Tu cuenta debe ser activada por un administrador antes de poder iniciar sesión.</li>
+              <li>Guarda estas credenciales en un lugar seguro.</li>
+              <li>Una vez activada, podrás acceder al portal docente con estas credenciales.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-4 text-center">
+        <p>Cuando tu cuenta sea activada, podrás iniciar sesión aquí:</p>
+        <a href="{% url 'docente_login' %}" class="btn btn-primary">Ir al Portal de Login</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function copiarAlPortapapeles(texto) {
+  navigator.clipboard.writeText(texto).then(() => {
+    alert('Copiado al portapapeles');
+  }).catch(err => {
+    console.error('Error al copiar:', err);
+  });
+}
+
+function mostrarOcultarPassword() {
+  const input = document.getElementById('passwordInput');
+  if (input.type === 'password') {
+    input.type = 'text';
+  } else {
+    input.type = 'password';
+  }
+}
+</script>
+{% endblock %}

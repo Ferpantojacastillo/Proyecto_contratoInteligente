@@ -1,0 +1,22 @@
+{% extends 'usuarios/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container">
+  <h2>Ingreso Docente</h2>
+  <p>Introduce tu <strong>usuario</strong> y la <strong>contraseña</strong> que te generó el sistema.</p>
+  <form method="post" class="mt-3">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <div class="mb-3">
+      <label class="form-label">Usuario</label>
+      {{ form.username }}
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Contraseña</label>
+      {{ form.password }}
+    </div>
+    <button class="btn btn-primary">Ingresar</button>
+  </form>
+</div>
+{% endblock %}

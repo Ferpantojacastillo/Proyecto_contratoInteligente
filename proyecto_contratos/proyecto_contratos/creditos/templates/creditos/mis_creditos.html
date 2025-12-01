@@ -1,0 +1,37 @@
+{% extends "usuarios/base.html" %}
+
+{% block content %}
+<h2 class="mt-4">Mis Créditos</h2>
+
+<table class="table table-striped mt-3">
+    <thead>
+        <tr>
+            <th>Actividad</th>
+            <th>Tipo</th>
+            <th>Semestre</th>
+            <th>Estado</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for c in creditos %}
+        <tr>
+            <td>{{ c.nombre }}</td>
+            <td>{{ c.get_tipo_display }}</td>
+            <td>{{ c.semestre }}</td>
+            <td>
+                {% if c.liberado %}
+                    <span class="badge bg-success">Disponible</span>
+                {% else %}
+                    <span class="badge bg-warning">Pendiente</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="4" class="text-center text-muted">No tienes créditos registrados.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}
