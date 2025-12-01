@@ -10,7 +10,13 @@ SECRET_KEY = 'django-insecure-#lsa5-ltu6#lj#ejm#75xtk9te1)8z@-4qazg%oo4_p%0@su+h
 
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']  # Permite todos los hosts en desarrollo
+
+# CSRF Configuration
+CSRF_TRUSTED_ORIGINS = ['http://127.0.0.1:8000', 'http://localhost:8000']
+SESSION_COOKIE_SECURE = False  # Permite cookies en HTTP (desarrollo)
+CSRF_COOKIE_SECURE = False     # Permite CSRF en HTTP (desarrollo)
+CSRF_COOKIE_HTTPONLY = False   # JavaScript puede leer el token CSRF
 
 
 INSTALLED_APPS = [

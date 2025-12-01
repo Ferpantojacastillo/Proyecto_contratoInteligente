@@ -34,6 +34,8 @@ def perfil(request):
 def inicio(request):
     if request.user.is_staff or request.user.es_admin_creditos:
         return redirect('panel_actividades')
+    elif request.user.es_docente:
+        return redirect('docente_dashboard')
     else:
         return redirect('perfil')
 
@@ -89,8 +91,9 @@ def docente_registro(request):
             docente.set_password(generated_pwd)
             docente.es_docente = True
             docente.es_alumno = False
-            # Dejar la cuenta inactiva para que NO pueda iniciar sesión hasta activación manual
-            docente.is_active = False
+            # Dejar la cuenta activa para que el docente pueda iniciar sesión
+            # inmediatamente con las credenciales mostradas.
+            docente.is_active = True
             docente.save()
 
             # Store credentials in session to display on confirmation page
@@ -100,15 +103,14 @@ def docente_registro(request):
 
             # Enviar correo si existe el email (opcional)
             if docente.email:
-                subject = 'Acceso al Portal Docente (creado, cuenta inactiva)'
+                subject = 'Acceso al Portal Docente'
                 login_url = getattr(settings, 'SITE_URL', '') + '/docente/login/'
                 message = (
                     f'Hola {docente.username},\n\n'
-                    f'Se creó tu cuenta de docente (actualmente INACTIVA).\n\n'
+                    f'Se creó tu cuenta de docente.\n\n'
                     f'Usuario: {docente.username}\n'
                     f'Contraseña: {generated_pwd}\n\n'
-                    f'Nota: La cuenta ha sido creada pero no está activa. Un administrador debe activarla antes de que puedas iniciar sesión.\n\n'
-                    f'Accede aquí cuando esté activada: {login_url}'
+                    f'Accede aquí: {login_url}'
                 )
                 try:
                     send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [docente.email])

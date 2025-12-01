@@ -23,10 +23,14 @@
       {% if user.is_authenticated %}
         {% if user.is_staff or user.es_admin_creditos %}
           <li class="nav-item"><a class="nav-link" href="{% url 'panel_actividades' %}">Panel Actividades</a></li>
-          <li class="nav-item"><a class="nav-link" href="{% url 'panel_creditos' %}">Panel Créditos</a></li>
+          {# Panel Créditos eliminado para administradores: solo pueden gestionar actividades #}
+        {% elif user.es_docente %}
+          <li class="nav-item"><a class="nav-link" href="{% url 'docente_asignar' %}">Asignar Créditos</a></li>
+          <li class="nav-item"><a class="nav-link" href="{% url 'docente_dashboard' %}">Firmar Créditos</a></li>
         {% else %}
           <li class="nav-item"><a class="nav-link" href="{% url 'perfil' %}">Perfil</a></li>
           <li class="nav-item"><a class="nav-link" href="{% url 'lista_actividades' %}">Actividades</a></li>
+          <li class="nav-item"><a class="nav-link" href="{% url 'mis_creditos' %}">Mis Créditos</a></li>
         {% endif %}
         <li class="nav-item">
           <form method="post" action="{% url 'logout' %}" class="d-inline">

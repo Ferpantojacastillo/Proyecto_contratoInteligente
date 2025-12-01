@@ -1,11 +1,13 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.csrf import csrf_protect
 from django.contrib import messages
 from django.utils import timezone
 from usuarios.models import Usuario
 from actividades.models import Actividad
 from .models import Credito, SolicitudCredito
 from django.http import HttpResponseForbidden
+from django.db.models import Q
 
 
 
@@ -52,7 +54,12 @@ def crear_credito(request):
     })
 @login_required
 def mis_creditos(request):
-    creditos = Credito.objects.filter(alumno=request.user).order_by('-id')
+    user = request.user
+    # Mostrar créditos asignados al usuario o créditos sin alumno pero con número de control igual al usuario
+    qs = Q(alumno=user)
+    if getattr(user, 'numero_control', None):
+        qs = qs | (Q(alumno__isnull=True) & Q(numero_control=user.numero_control))
+    creditos = Credito.objects.filter(qs).order_by('-id')
     return render(request, 'creditos/mis_creditos.html', {
         'creditos': creditos
     })
@@ -199,21 +206,73 @@ def lista_creditos_docente(request):
 
 
 @login_required
-def firmar_por_docente(request, id_credito):
+def docente_asignar(request):
+    """Lista de créditos para que el docente pueda asignar (liberar) a alumnos.
+    Solo accesible para usuarios con `es_docente=True`.
+    """
+    if not request.user.es_docente:
+        return HttpResponseForbidden('Permisos insuficientes')
+
+    creditos = Credito.objects.filter(liberado=False).order_by('-id')
+    return render(request, 'creditos/lista_creditos_docente_asignar.html', {'creditos': creditos})
+
+
+@login_required
+def docente_liberar_credito(request, id_credito):
+    if request.method != 'POST':
+        return HttpResponseForbidden('Use POST')
+
+    if not getattr(request.user, 'es_docente', False):
+        return HttpResponseForbidden('Permisos insuficientes')
+
     credito = get_object_or_404(Credito, id=id_credito)
+    credito.liberado = True
+    credito.fecha_liberacion = timezone.now().date()
+    credito.save()
+    messages.success(request, 'Crédito liberado por docente.')
+    return redirect('docente_asignar')
+
+
+@login_required
+def firmar_por_docente(request, id_credito):
+    if request.method != 'POST':
+        return HttpResponseForbidden('Use POST')
+    
+    credito = get_object_or_404(Credito, id=id_credito)
+    # El docente solo puede firmar si el crédito fue asignado por el admin (liberado)
+    if not credito.liberado:
+        messages.error(request, 'El crédito no ha sido liberado por el administrador aún.')
+        return redirect('docente_dashboard')
+    
     credito.firmado_docente = True
     credito.firmado_docente_por = request.user
     credito.firmado_docente_en = timezone.now()
     credito.save()
     messages.success(request, 'Crédito firmado por docente.')
-    return redirect('lista_creditos_docente')
+    return redirect('docente_dashboard')
 
 
 @login_required
 def firmar_por_alumno(request, id_credito):
+    # Sólo aceptar POST para firmar
+    if request.method != 'POST':
+        return HttpResponseForbidden('Use POST')
+
     credito = get_object_or_404(Credito, id=id_credito)
+
+    # Verificar que el usuario es el alumno asignado o que el número de control coincide
+    usuario = request.user
+    numero_ok = credito.numero_control and usuario.numero_control and credito.numero_control.strip() == usuario.numero_control.strip()
+    if not (credito.alumno == usuario or numero_ok):
+        messages.error(request, 'No tienes permiso para firmar este crédito.')
+        return redirect('mis_creditos')
+
+    # Si el crédito no tiene alumno asignado, asignarlo al firmante
+    if credito.alumno is None:
+        credito.alumno = usuario
+
     credito.firmado_alumno = True
-    credito.firmado_alumno_por = request.user
+    credito.firmado_alumno_por = usuario
     credito.firmado_alumno_en = timezone.now()
     credito.save()
     messages.success(request, 'Crédito firmado por alumno.')
@@ -241,7 +300,21 @@ def docente_login(request):
 
 @login_required
 def docente_dashboard(request):
-    return render(request, 'creditos/docente_dashboard.html')
+    # Obtener todas las actividades
+    actividades = Actividad.objects.all().order_by('nombre')
+    
+    # Obtener créditos pendientes de firma por el docente:
+    # - El crédito debe estar liberado (asignado por admin)
+    # - Aún no ha sido firmado por el docente (firmado_docente = False)
+    creditos_por_firmar = Credito.objects.filter(
+        liberado=True,
+        firmado_docente=False
+    ).order_by('-id')
+    
+    return render(request, 'creditos/docente_dashboard.html', {
+        'actividades': actividades,
+        'creditos': creditos_por_firmar,
+    })
 
 
 @login_required
@@ -251,12 +324,13 @@ def wallet(request):
 
 @login_required
 def credito_pdf(request, id_credito):
-    """Genera un PDF sencillo para un crédito terminado (liberado).
+    """Genera un PDF para un crédito completamente firmado (por alumno Y docente).
 
-    El PDF incluirá el número de control y el nombre del alumno. El archivo
-    resultante tendrá como nombre `<numero_control>.pdf`.
+    El PDF solo se genera si AMBOS (alumno y docente) han firmado el crédito.
     """
     import io
+    import os
+    from pathlib import Path
     try:
         from reportlab.pdfgen import canvas
         from reportlab.lib.pagesizes import A4
@@ -267,11 +341,20 @@ def credito_pdf(request, id_credito):
 
     credito = get_object_or_404(Credito, id=id_credito)
 
-    # Solo el alumno propietario puede descargar su PDF (y debe estar liberado)
-    if not credito.liberado:
-        return HttpResponseForbidden('El crédito no está liberado todavía.')
+    # Solo el alumno propietario puede generar su PDF
     if credito.alumno != request.user:
-        return HttpResponseForbidden('No tienes permiso para descargar este documento.')
+        messages.error(request, 'No tienes permiso para generar este documento.')
+        return redirect('mis_creditos')
+    
+    # El PDF solo se genera si AMBOS firman (alumno Y docente)
+    if not (credito.firmado_alumno and credito.firmado_docente):
+        messages.error(request, 'El crédito debe estar firmado por ti (alumno) y por el docente para descargar el PDF.')
+        return redirect('mis_creditos')
+
+    # Crear carpeta documentos si no existe (en la raíz del proyecto, al lado de manage.py)
+    from django.conf import settings
+    docs_dir = Path(settings.BASE_DIR) / 'documentos'
+    docs_dir.mkdir(exist_ok=True)
 
     buffer = io.BytesIO()
     p = canvas.Canvas(buffer, pagesize=A4)
@@ -298,8 +381,42 @@ def credito_pdf(request, id_credito):
     p.save()
 
     buffer.seek(0)
-    filename = f"{numero_control}.pdf"
-    response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="{filename}"'
-    return response
+    # Nombre único por crédito: número de control + id del crédito
+    safe_num = (str(numero_control).replace(' ', '_'))
+    filename = f"{safe_num}-credito-{credito.id}.pdf"
+    filepath = docs_dir / filename
+
+    # Guardar PDF en archivo del proyecto
+    try:
+        with open(filepath, 'wb') as f:
+            f.write(buffer.getvalue())
+    except Exception as e:
+        messages.error(request, f'Error al guardar PDF en el proyecto: {e}')
+        return redirect('mis_creditos')
+
+    # También guardar una copia en la carpeta 'Documents' del usuario del sistema (si existe)
+    try:
+        user_docs = Path.home() / 'Documents'
+        user_docs.mkdir(parents=True, exist_ok=True)
+        user_filepath = user_docs / filename
+        with open(user_filepath, 'wb') as f2:
+            f2.write(buffer.getvalue())
+    except Exception:
+        # No bloquear si no se pudo escribir en Documents; sólo informamos con mensaje opcional
+        user_filepath = None
+
+    # Devolver el PDF como respuesta de descarga
+    try:
+        from django.http import HttpResponse
+        buffer.seek(0)
+        response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        if user_filepath:
+            messages.success(request, f'PDF guardado en: {user_filepath}')
+        else:
+            messages.success(request, f'PDF generado: {filename}')
+        return response
+    except Exception as e:
+        messages.error(request, f'Error al preparar la descarga: {e}')
+        return redirect('mis_creditos')
 

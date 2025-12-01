@@ -10,6 +10,8 @@
             <th>Tipo</th>
             <th>Semestre</th>
             <th>Estado</th>
+            <th>Firmado (Alumno/Docente)</th>
+            <th>Acciones</th>
         </tr>
     </thead>
     <tbody>
@@ -25,10 +27,42 @@
                     <span class="badge bg-warning">Pendiente</span>
                 {% endif %}
             </td>
+            <td>
+                <small>
+                    {% if c.firmado_alumno %}<span class="badge bg-success">✓ Alumno</span>{% else %}<span class="badge bg-danger">✗ Alumno</span>{% endif %}
+                    {% if c.firmado_docente %}<span class="badge bg-success">✓ Docente</span>{% else %}<span class="badge bg-danger">✗ Docente</span>{% endif %}
+                </small>
+            </td>
+            <td>
+                {# Botón para que el alumno firme (sólo si es el propietario, está liberado y no ha firmado aún) #}
+                {% if not c.firmado_alumno %}
+                    {% if c.alumno == user %}
+                        <form method="post" action="{% url 'firmar_por_alumno' c.id %}" style="display: inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-success">Firmar (Alumno)</button>
+                        </form>
+                    {% elif not c.alumno and c.numero_control and user.numero_control and c.numero_control == user.numero_control %}
+                        <form method="post" action="{% url 'firmar_por_alumno' c.id %}" style="display: inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-success">Firmar (Alumno)</button>
+                        </form>
+                    {% endif %}
+                {% endif %}
+
+                {# Botón para descargar PDF sólo cuando ambos hayan firmado #}
+                {% if c.firmado_alumno and c.firmado_docente %}
+                    <form method="post" action="{% url 'credito_pdf' c.id %}" style="display: inline; margin-left:6px;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-primary">Descargar PDF</button>
+                    </form>
+                {% else %}
+                    <button class="btn btn-sm btn-secondary" disabled title="El crédito debe estar firmado por alumno y docente">PDF (pendiente firmas)</button>
+                {% endif %}
+            </td>
         </tr>
         {% empty %}
         <tr>
-            <td colspan="4" class="text-center text-muted">No tienes créditos registrados.</td>
+            <td colspan="6" class="text-center text-muted">No tienes créditos registrados.</td>
         </tr>
         {% endfor %}
     </tbody>

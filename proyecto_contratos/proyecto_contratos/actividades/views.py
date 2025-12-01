@@ -7,6 +7,8 @@ from creditos.models import Credito
 from usuarios.models import Usuario
 from django.urls import reverse
 from django.utils import timezone
+from django.db.models import Q
+from django.http import HttpResponseForbidden
 
 
 def es_admin(user):
@@ -23,10 +25,63 @@ def lista_actividades(request):
 def detalle_actividad(request, id_actividad):
     actividad = get_object_or_404(Actividad, id=id_actividad)
     esta_inscrito = request.user in actividad.inscritos.all()
+    # Buscar si existe un crédito vinculado para el usuario actual y esta actividad
+    credito_usuario = None
+    if request.user.is_authenticated:
+        try:
+            num = getattr(request.user, 'numero_control', None)
+            credito_qs = Credito.objects.filter(
+                Q(alumno=request.user) |
+                (Q(alumno__isnull=True) & Q(numero_control=num))
+            ).filter(nombre__icontains=actividad.nombre)
+            credito_usuario = credito_qs.order_by('-id').first()
+        except Exception:
+            credito_usuario = None
     return render(request, 'actividades/detalle.html', {
         'actividad': actividad,
         'esta_inscrito': esta_inscrito
+        , 'credito_usuario': credito_usuario
     })
+
+
+@login_required
+def firmar_actividad_credito(request, id_actividad):
+    if request.method != 'POST':
+        return HttpResponseForbidden('Use POST')
+
+    actividad = get_object_or_404(Actividad, id=id_actividad)
+
+    # Sólo alumnos pueden firmar
+    if request.user.is_staff or getattr(request.user, 'es_admin_creditos', False):
+        messages.error(request, 'Solo alumnos pueden firmar este crédito.')
+        return redirect('detalle_actividad', id_actividad=id_actividad)
+
+    usuario = request.user
+
+    # Buscar crédito existente del alumno o por numero_control/actividad
+    num = getattr(usuario, 'numero_control', None)
+    credito = Credito.objects.filter(Q(alumno=usuario) | (Q(alumno__isnull=True) & Q(numero_control=num))).filter(nombre__icontains=actividad.nombre).order_by('-id').first()
+
+    if not credito:
+        credito = Credito.objects.create(
+            alumno=usuario,
+            nombre=f"{actividad.nombre} {actividad.convo}" if getattr(actividad, 'convo', '') else actividad.nombre,
+            tipo=actividad.tipo,
+            semestre='--',
+            numero_control=num or '',
+            liberado=False,
+        )
+
+    # Asignar alumno si faltaba y marcar firmado por alumno
+    if credito.alumno is None:
+        credito.alumno = usuario
+
+    credito.firmado_alumno = True
+    credito.firmado_alumno_por = usuario
+    credito.firmado_alumno_en = timezone.now()
+    credito.save()
+    messages.success(request, 'Has firmado el crédito para esta actividad.')
+    return redirect('mis_creditos')
 
 
 @login_required
@@ -38,7 +93,22 @@ def inscribirse(request, id_actividad):
         return redirect('detalle_actividad', id_actividad=id_actividad)
 
     actividad.inscritos.add(request.user)
-    messages.success(request, "Te inscribiste correctamente.")
+
+    # Crear un crédito asociado a la inscripción si no existe
+    from creditos.models import Credito
+    usuario = request.user
+    exists = Credito.objects.filter(alumno=usuario, nombre=actividad.nombre, tipo=actividad.tipo).exists()
+    if not exists:
+        Credito.objects.create(
+            alumno=usuario,
+            nombre=f"{actividad.nombre} {actividad.convo}" if getattr(actividad, 'convo', '') else actividad.nombre,
+            tipo=actividad.tipo,
+            semestre='--',
+            numero_control=getattr(usuario, 'numero_control', '') or '',
+            liberado=False,
+        )
+
+    messages.success(request, "Te inscribiste correctamente. Se creó tu solicitud de crédito (pendiente de liberación).")
     return redirect('detalle_actividad', id_actividad=id_actividad)
 
 

@@ -38,6 +38,13 @@
         {% if user.is_authenticated %}
           {% if not user.is_staff and not user.es_admin_creditos %}
             <a href="{% url 'inscribirse' actividad.id %}" class="btn btn-primary">Inscribirme</a>
+            {# Mostrar botón de firmar si existe un crédito para este usuario y no está firmado por el alumno #}
+            {% if credito_usuario and not credito_usuario.firmado_alumno %}
+              <form method="post" action="{% url 'firmar_actividad' actividad.id %}" class="d-inline ms-2">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-success">Firmar Crédito</button>
+              </form>
+            {% endif %}
           {% endif %}
         {% endif %}
       {% endif %}

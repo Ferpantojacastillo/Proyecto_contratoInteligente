@@ -26,9 +26,12 @@
         <td>{{ act.fecha }}</td>
         <td>
           {% for u in act.inscritos.all %}
-            <div>{{ u.username }} 
-              <a class="btn btn-sm btn-outline-success" href="{% url 'registrar_credito' act.id u.id %}">Registrar crédito</a>
-            </div>
+            {# Ocultar usuarios que contienen 'docente 7' o 'docente7' en el username (caso-insensible) #}
+            {% if 'docente 7' not in u.username|lower and 'docente7' not in u.username|lower %}
+              <div>{{ u.username }} 
+                <a class="btn btn-sm btn-outline-success" href="{% url 'registrar_credito' act.id u.id %}">Registrar crédito</a>
+              </div>
+            {% endif %}
           {% empty %}
             <span class="text-muted">Sin inscritos</span>
           {% endfor %}

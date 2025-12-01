@@ -1,6 +1,7 @@
 from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin
 from django import forms
+from django.forms import PasswordInput
 from django.utils.crypto import get_random_string
 from django.core.mail import send_mail
 from django.conf import settings
@@ -8,19 +9,39 @@ from .models import Usuario
 
 
 class UsuarioAdminForm(forms.ModelForm):
+    # Campo auxiliar para que el administrador pueda introducir
+    # una contraseña en texto plano al crear/editar un usuario.
+    raw_password = forms.CharField(
+        label='Contraseña (texto plano)',
+        required=False,
+        widget=PasswordInput(attrs={'class': 'form-control'}),
+        help_text='Si rellenas este campo, la contraseña será hasheada automáticamente.'
+    )
     class Meta:
         model = Usuario
         fields = '__all__'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Hacer el campo 'password' opcional si existe (puede no estar en fieldsets personalizados)
+        if 'password' in self.fields:
+            self.fields['password'].required = False
 
     def save(self, commit=True):
         # Asegurar que si el administrador introduce una contraseña en texto
         # plano en el campo `password`, se convierta a hash con `set_password`.
         user = super().save(commit=False)
-        pwd = self.cleaned_data.get('password')
-        # Si hay una contraseña y no parece ya estar hasheada (no contiene '$'),
-        # usar `set_password` para guardarla correctamente.
-        if pwd and '$' not in pwd:
-            user.set_password(pwd)
+        # Primero, si el admin usó el campo auxiliar `raw_password`, priorizarlo.
+        raw = self.cleaned_data.get('raw_password')
+        if raw:
+            user.set_password(raw)
+        else:
+            # Compatibilidad con posibles usos del campo `password` en el formulario:
+            pwd = self.cleaned_data.get('password')
+            # Si hay una contraseña y no parece ya estar hasheada (no contiene '$'),
+            # usar `set_password` para guardarla correctamente.
+            if pwd and '$' not in pwd:
+                user.set_password(pwd)
         if commit:
             user.save()
         return user
@@ -29,6 +50,7 @@ class UsuarioAdminForm(forms.ModelForm):
 @admin.register(Usuario)
 class CustomUserAdmin(UserAdmin):
     form = UsuarioAdminForm
+    add_form = UsuarioAdminForm
 
     list_display = (
         'username', 'email', 'numero_control',
@@ -39,25 +61,34 @@ class CustomUserAdmin(UserAdmin):
         'es_admin_creditos', 'es_docente', 'es_alumno', 'is_staff', 'is_active'
     )
 
-    fieldsets = UserAdmin.fieldsets + (
+    # Fieldsets para edición de usuarios existentes
+    fieldsets = (
+        ('Datos básicos', {
+            'fields': ('username', 'email', 'first_name', 'last_name', 'raw_password')
+        }),
         ('Información adicional del usuario', {
-            'fields': (
-                'numero_control',
-                'es_admin_creditos',
-                'es_docente',
-                'es_alumno',
-            )
+            'fields': ('numero_control', 'es_admin_creditos', 'es_docente', 'es_alumno')
+        }),
+        ('Permisos', {
+            'fields': ('is_staff', 'is_superuser', 'is_active', 'groups')
+        }),
+        ('Fechas importantes', {
+            'fields': ('last_login', 'date_joined'),
+            'classes': ('collapse',)
         }),
     )
 
-    add_fieldsets = UserAdmin.add_fieldsets + (
+    # Fieldsets para crear nuevos usuarios (sin campos de fecha que se generan automáticamente)
+    add_fieldsets = (
+        ('Datos básicos', {
+            'fields': ('username', 'email', 'first_name', 'last_name', 'raw_password'),
+            'description': 'Rellena el campo "Contraseña (texto plano)" con la contraseña que quieras asignar.'
+        }),
         ('Información adicional', {
-            'fields': (
-                'numero_control',
-                'es_admin_creditos',
-                'es_docente',
-                'es_alumno',
-            )
+            'fields': ('numero_control', 'es_admin_creditos', 'es_docente', 'es_alumno')
+        }),
+        ('Permisos', {
+            'fields': ('is_staff', 'is_superuser', 'is_active')
         }),
     )
 
@@ -78,10 +109,26 @@ class CustomUserAdmin(UserAdmin):
     def save_model(self, request, obj, form, change):
         # Si es docente y se está creando por primera vez
         if obj.es_docente and not change:
-            generated_pwd = get_random_string(12)
-            obj.set_password(generated_pwd)
+            # Si el administrador ya proporcionó una contraseña en el formulario
+            # (campo auxiliar `raw_password`), respetarla; en caso contrario,
+            # generar una contraseña aleatoria y asignarla.
+            provided = None
+            try:
+                provided = form.cleaned_data.get('raw_password')
+            except Exception:
+                provided = None
 
-            messages.success(request, f'Contraseña docente generada: {generated_pwd} (cópiala ahora, se mostrará solo una vez).')
+            if provided:
+                obj.set_password(provided)
+                generated_pwd = provided
+            else:
+                generated_pwd = get_random_string(12)
+                obj.set_password(generated_pwd)
+            # Asegurar que la cuenta quede activa para que el docente pueda
+            # iniciar sesión inmediatamente con las credenciales mostradas.
+            obj.is_active = True
+
+            messages.success(request, f'Contraseña docente: {generated_pwd} (cópiala ahora, se mostrará solo una vez).')
 
             if obj.email:
                 subject = 'Acceso al Portal Docente'

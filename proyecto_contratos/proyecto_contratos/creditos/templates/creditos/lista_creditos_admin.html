@@ -13,7 +13,6 @@
                 <th>Alumno</th>
                 <th>Numero control</th>
                 <th>Disponible</th>
-                <th>Firmado Admin</th>
                 <th>Firmado Docente</th>
                 <th>Acciones</th>
             </tr>
@@ -34,14 +33,7 @@
                     {% endif %}
                 </td>
                 <td>{% if c.liberado %}Disponible ({{ c.fecha_liberacion }}){% else %}No{% endif %}</td>
-                <td>
-                    {% if c.firmado_admin %}
-                        Sí
-                        {% if c.firmado_admin_por %}- por {{ c.firmado_admin_por.username }} en {{ c.firmado_admin_en|date:"Y-m-d H:i" }}{% endif %}
-                    {% else %}
-                        No
-                    {% endif %}
-                </td>
+                {# Administrador ya no firma; eliminada la columna de firmado_admin #}
                 <td>
                     {% if c.firmado_docente %}
                         Sí
@@ -51,7 +43,8 @@
                     {% endif %}
                 </td>
                 <td>
-                    <a href="{% url 'asignar_credito' c.id %}" class="btn btn-sm btn-primary">Asignar / Liberar</a>
+                    {# Administrador ya no asigna actividades; solo puede ver y eliminar. #}
+                    <a href="{% url 'contrato' c.id %}" class="btn btn-sm btn-secondary">Ver contrato</a>
                     <a href="{% url 'contrato' c.id %}" class="btn btn-sm btn-secondary">Ver contrato</a>
                     <form method="post" action="{% url 'eliminar_credito' c.id %}" class="d-inline" onsubmit="return confirm('¿Eliminar crédito ID {{ c.id }}? Esta acción no se puede deshacer.');">
                         {% csrf_token %}

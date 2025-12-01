@@ -21,6 +21,9 @@ urlpatterns = [
     path('docente/firmar/<int:id_credito>/', views.firmar_por_docente, name='firmar_por_docente'),
     path('docente/login/', views.docente_login, name='docente_login'),
     path('docente/dashboard/', views.docente_dashboard, name='docente_dashboard'),
+    path('docente/asignar/', views.docente_asignar, name='docente_asignar'),
+    path('docente/liberar/<int:id_credito>/', views.docente_liberar_credito, name='docente_liberar_credito'),
+    path('pdf/<int:id_credito>/', views.credito_pdf, name='credito_pdf'),
 ]
 
 

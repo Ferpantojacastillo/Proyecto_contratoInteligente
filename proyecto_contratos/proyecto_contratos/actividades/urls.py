@@ -13,8 +13,8 @@ urlpatterns = [
 
     
     path('<int:id_actividad>/', views.detalle_actividad, name='detalle_actividad'),
-
     
+    path('<int:id_actividad>/firmar/', views.firmar_actividad_credito, name='firmar_actividad'),
     path('<int:id_actividad>/inscribirse/', views.inscribirse, name='inscribirse'),
 
     

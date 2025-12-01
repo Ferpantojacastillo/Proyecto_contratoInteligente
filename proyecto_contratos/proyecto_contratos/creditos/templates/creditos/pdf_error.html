@@ -1,0 +1,7 @@
+{% extends "usuarios/base.html" %}
+
+{% block content %}
+<h2 class="mt-4">Error generando PDF</h2>
+<div class="alert alert-danger">{{ error }}</div>
+<a class="btn btn-secondary" href="{% url 'mis_creditos' %}">Volver</a>
+{% endblock %}

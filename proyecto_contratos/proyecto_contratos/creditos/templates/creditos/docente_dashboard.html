@@ -2,60 +2,103 @@
 {% load static %}
 
 {% block content %}
-<div class="container">
-  <h2>Panel del Docente</h2>
+<div class="container mt-4">
+  <h2 class="mb-4">Panel del Docente</h2>
 
-  <h4 class="mt-4">Registrar alumno y crear crédito</h4>
-  <form method="post" class="row g-3 mt-2">
-    {% csrf_token %}
-    <div class="col-md-6">
-      <label class="form-label">Nombre completo</label>
-      <input name="nombre" class="form-control" required />
+  <!-- Sección de Actividades -->
+  <div class="card mb-5">
+    <div class="card-header bg-primary text-white">
+      <h4 class="mb-0">Actividades Disponibles</h4>
     </div>
-    <div class="col-md-4">
-      <label class="form-label">Número de control</label>
-      <input name="numero_control" class="form-control" required />
+    <div class="card-body">
+      {% if actividades %}
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>Nombre de Actividad</th>
+                <th>Descripción</th>
+                <th>Fecha</th>
+                <th>Capacidad</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for actividad in actividades %}
+              <tr>
+                <td><strong>{{ actividad.nombre }}</strong></td>
+                <td>{{ actividad.descripcion|truncatewords:15 }}</td>
+                <td>{{ actividad.fecha|date:"d/m/Y" }}</td>
+                <td>{{ actividad.capacidad }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="text-muted">No hay actividades registradas en el sistema.</p>
+      {% endif %}
     </div>
-    <div class="col-md-2">
-      <label class="form-label">Semestre</label>
-      <input name="semestre" class="form-control" />
-    </div>
-    <div class="col-12">
-      <input type="hidden" name="tipo" value="academico" />
-      <button class="btn btn-success">Crear crédito</button>
-    </div>
-  </form>
+  </div>
 
-  <h4 class="mt-5">Créditos pendientes de firma</h4>
-  {% if creditos %}
-    <table class="table mt-3">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Nombre</th>
-          <th>Alumno</th>
-          <th>Número</th>
-          <th>Acción</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for c in creditos %}
-        <tr>
-          <td>{{ c.id }}</td>
-          <td>{{ c.nombre }}</td>
-          <td>{{ c.alumno.username if c.alumno else '—' }}</td>
-          <td>{{ c.numero_control }}</td>
-          <td>
-            <form method="post" action="{% url 'firmar_por_docente' c.id %}">{% csrf_token %}
-              <button class="btn btn-primary btn-sm">Firmar</button>
-            </form>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  {% else %}
-    <p class="mt-3">No hay créditos pendientes por firmar.</p>
-  {% endif %}
+  <!-- Sección de Créditos para Firmar -->
+  <div class="card mb-5">
+    <div class="card-header bg-warning text-dark">
+      <h4 class="mb-0">Créditos para Firmar</h4>
+    </div>
+    <div class="card-body">
+      {% if creditos %}
+        <div class="alert alert-info">
+          <strong>{{ creditos|length }}</strong> crédito(s) pendiente(s) de tu firma. 
+          (El administrador ya asignó estas actividades)
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Nombre del Crédito</th>
+                <th>Alumno</th>
+                <th>Número de Control</th>
+                <th>Tipo</th>
+                <th>Semestre</th>
+                <th>Firmado por Alumno</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for c in creditos %}
+              <tr>
+                <td><strong>#{{ c.id }}</strong></td>
+                <td>{{ c.nombre }}</td>
+                <td>{% if c.alumno %}{{ c.alumno.username }}{% else %}-{% endif %}</td>
+                <td>{{ c.numero_control }}</td>
+                <td><span class="badge bg-secondary">{{ c.get_tipo_display }}</span></td>
+                <td>{{ c.semestre }}</td>
+                <td>
+                  {% if c.firmado_alumno %}
+                    <span class="badge bg-success">✓ Sí</span>
+                  {% else %}
+                    <span class="badge bg-danger">✗ Pendiente</span>
+                  {% endif %}
+                </td>
+                <td>
+                    <form method="post" action="{% url 'firmar_por_docente' c.id %}" style="display: inline;">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-success btn-sm">
+                        {% if c.firmado_alumno %}Firmar{% else %}Firmar (Alumno pendiente){% endif %}
+                      </button>
+                    </form>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="text-success"><strong>✓</strong> No hay créditos pendientes por firmar. ¡Todo al día!</p>
+      {% endif %}
+    </div>
+  </div>
+
 </div>
 {% endblock %}

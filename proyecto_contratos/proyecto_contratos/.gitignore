@@ -1,0 +1,55 @@
+# Carpeta de documentos generados (PDFs de créditos)
+documentos/
+
+# Django
+*.pyc
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Entorno virtual
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Base de datos
+db.sqlite3
+*.sqlite
+*.sqlite3
+
+# Media y estáticos
+media/
+staticfiles/
+
+# Ambiente
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db

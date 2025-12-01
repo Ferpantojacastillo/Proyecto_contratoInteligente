@@ -1,0 +1,46 @@
+{% extends 'usuarios/base.html' %}
+{% block title %}Asignar Créditos - Docente{% endblock %}
+{% block content %}
+<div class="container mt-2">
+    <h3 class="page-title">Asignar Créditos (Docente)</h3>
+
+    {% if creditos and creditos.exists %}
+        <table class="table table-striped mt-4">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Alumno</th>
+                    <th>Número de control</th>
+                    <th>Semestre</th>
+                    <th>Acción</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for credito in creditos %}
+                <tr>
+                    <td>{{ credito.id }}</td>
+                    <td>{{ credito.nombre }}</td>
+                    <td>{% if credito.alumno %}{{ credito.alumno.username }}{% else %}(sin alumno){% endif %}</td>
+                    <td>{{ credito.numero_control }}</td>
+                    <td>{{ credito.semestre }}</td>
+                    <td>
+                        <a href="{% url 'asignar_credito' credito.id %}" class="btn btn-primary btn-sm">Asignar</a>
+                        {% if credito.alumno %}
+                        <form method="post" action="{% url 'docente_liberar_credito' credito.id %}" style="display:inline; margin-left:6px;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-success btn-sm">Liberar</button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <div class="alert alert-info mt-4">No hay créditos pendientes para asignar.</div>
+    {% endif %}
+
+    <a href="{% url 'docente_dashboard' %}" class="btn btn-secondary mt-3">Volver</a>
+</div>
+{% endblock %}

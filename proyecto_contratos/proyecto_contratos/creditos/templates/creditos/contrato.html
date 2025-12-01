@@ -11,9 +11,7 @@
   <hr>
   <p>Firmas:</p>
   <ul>
-    <li>Administrador firmado: {% if credito.firmado_admin %}✅ Sí{% else %}❌ No{% endif %}
-        {% if credito.firmado_admin_por %}- por {{ credito.firmado_admin_por.username }} en {{ credito.firmado_admin_en|date:"Y-m-d H:i" }}{% endif %}
-    </li>
+    {# Eliminado el estado "Firmado por Administrador" segun nueva política #}
     <li>Docente firmado: {% if credito.firmado_docente %}✅ Sí{% else %}❌ No{% endif %}
         {% if credito.firmado_docente_por %}- por {{ credito.firmado_docente_por.username }} en {{ credito.firmado_docente_en|date:"Y-m-d H:i" }}{% endif %}
     </li>
@@ -23,12 +21,17 @@
   </ul>
 
   <div class="d-flex gap-2 mt-3">
-    {% if not credito.firmado_alumno and credito.liberado and credito.alumno == user %}
-      <a href="{% url 'firmar_por_alumno' credito.id %}" class="btn btn-primary">Firmar (Alumno)</a>
-    {% endif %}
-    {% if not credito.firmado_admin and credito.liberado %}
-      {% if user.is_staff or user.es_admin_creditos %}
-        <a href="{% url 'firmar_por_admin' credito.id %}" class="btn btn-warning">Firmar (Admin)</a>
+    {% if not credito.firmado_alumno %}
+      {% if credito.alumno == user %}
+        <form method="post" action="{% url 'firmar_por_alumno' credito.id %}" style="display:inline;">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-primary">Firmar (Alumno)</button>
+        </form>
+      {% elif not credito.alumno and credito.numero_control and user.numero_control and credito.numero_control == user.numero_control %}
+        <form method="post" action="{% url 'firmar_por_alumno' credito.id %}" style="display:inline;">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-primary">Firmar (Alumno)</button>
+        </form>
       {% endif %}
     {% endif %}
     <a href="{% url 'mis_creditos' %}" class="btn btn-secondary">Volver</a>
