@@ -3,6 +3,7 @@ Django settings for proyecto_creditos project.
 """
 
 from pathlib import Path
+import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -116,5 +117,35 @@ LOGIN_URL = '/login/'
 # Si quieres que los docentes usen su propia ruta de login en los correos:
 SITE_URL = 'https://tusitio.com'   # cámbialo por tu dominio real
 DOCENTE_INVITE_CODE = 'CAMBIA-ESTE-CODIGO'
+
+# Smart Contract (Algorand) integration settings
+# - ENABLED: activar/desactivar llamadas on-chain desde la vista de descarga
+# - APP_ID: id de la aplicación desplegada (si ya la tienes)
+# - SIGNER_MNEMONIC: mnemonic del account que enviará la firma (opcional)
+# Nota: por seguridad no dejes mnemonics en el repo en producción; usa variables de entorno.
+def _env_bool(key, default=False):
+    v = os.getenv(key)
+    if v is None:
+        return default
+    return str(v).lower() in ('1', 'true', 'yes', 'on')
+
+def _env_int(key):
+    v = os.getenv(key)
+    if v is None or v == '':
+        return None
+    try:
+        return int(v)
+    except Exception:
+        return None
+
+SMART_CONTRACT = {
+    'ENABLED': _env_bool('SMART_CONTRACT_ENABLED', False),
+    'DEPLOY_PER_CREDITO': _env_bool('SMART_CONTRACT_DEPLOY_PER_CREDITO', False),
+    'APP_ID': _env_int('SMART_CONTRACT_APP_ID'),
+    'SIGNER_MNEMONIC': os.getenv('SMART_CONTRACT_SIGNER_MNEMONIC', ''),
+    'ADMIN_MNEMONIC': os.getenv('SMART_CONTRACT_ADMIN_MNEMONIC', ''),
+    'STUDENT_MNEMONIC': os.getenv('SMART_CONTRACT_STUDENT_MNEMONIC', ''),
+    'OFFICER_MNEMONIC': os.getenv('SMART_CONTRACT_OFFICER_MNEMONIC', ''),
+}
 
 

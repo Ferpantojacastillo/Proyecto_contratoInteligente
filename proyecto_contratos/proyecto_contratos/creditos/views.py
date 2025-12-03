@@ -48,14 +48,17 @@ def crear_credito(request):
 
         return redirect("mis_creditos")
 
-    return render(request, "creditos/crear_credito.html", {
-        "usuarios": usuarios,
-        "actividades": actividades,
-    })
 @login_required
 def mis_creditos(request):
     user = request.user
     # Mostrar créditos asignados al usuario o créditos sin alumno pero con número de control igual al usuario
+    qs = Q(alumno=user)
+    if getattr(user, 'numero_control', None):
+        qs = qs | (Q(alumno__isnull=True) & Q(numero_control=user.numero_control))
+    creditos = Credito.objects.filter(qs).order_by('-id')
+    return render(request, 'creditos/mis_creditos.html', {
+        'creditos': creditos
+    })
     qs = Q(alumno=user)
     if getattr(user, 'numero_control', None):
         qs = qs | (Q(alumno__isnull=True) & Q(numero_control=user.numero_control))
@@ -324,75 +327,118 @@ def wallet(request):
 
 @login_required
 def credito_pdf(request, id_credito):
-    """Genera un PDF para un crédito completamente firmado (por alumno Y docente).
+    """Descarga el PDF de plan de estudios firmado (desde proyecto_creditos/src/docs/plan_estudios.pdf).
 
-    El PDF solo se genera si AMBOS (alumno y docente) han firmado el crédito.
+    Solo se descarga si AMBOS (alumno y docente) han firmado el crédito.
     """
-    import io
     import os
     from pathlib import Path
-    try:
-        from reportlab.pdfgen import canvas
-        from reportlab.lib.pagesizes import A4
-    except Exception:
-        return render(request, 'creditos/pdf_error.html', {
-            'error': 'La librería reportlab no está instalada. Ejecuta: pip install reportlab'
-        }, status=500)
+    from django.http import HttpResponse
+    from django.conf import settings
 
     credito = get_object_or_404(Credito, id=id_credito)
 
-    # Solo el alumno propietario puede generar su PDF
+    # Solo el alumno propietario puede descargar su PDF
     if credito.alumno != request.user:
-        messages.error(request, 'No tienes permiso para generar este documento.')
+        messages.error(request, 'No tienes permiso para descargar este documento.')
         return redirect('mis_creditos')
     
-    # El PDF solo se genera si AMBOS firman (alumno Y docente)
+    # El PDF solo se descarga si AMBOS firman (alumno Y docente)
     if not (credito.firmado_alumno and credito.firmado_docente):
         messages.error(request, 'El crédito debe estar firmado por ti (alumno) y por el docente para descargar el PDF.')
         return redirect('mis_creditos')
 
+    # Ubicar el PDF en proyecto_creditos/src/docs/plan_estudios.pdf
+    pdf_path = Path(settings.BASE_DIR).parent / 'proyecto_creditos' / 'src' / 'docs' / 'plan_estudios.pdf'
+    
+    # Si no existe en esa ruta, intentar buscar en ruta relativa
+    if not pdf_path.exists():
+        pdf_path = Path(settings.BASE_DIR) / 'proyecto_creditos' / 'src' / 'docs' / 'plan_estudios.pdf'
+    
+    if not pdf_path.exists():
+        messages.error(request, 'El archivo PDF no se encontró en el servidor.')
+        return redirect('mis_creditos')
+
     # Crear carpeta documentos si no existe (en la raíz del proyecto, al lado de manage.py)
-    from django.conf import settings
     docs_dir = Path(settings.BASE_DIR) / 'documentos'
     docs_dir.mkdir(exist_ok=True)
 
-    buffer = io.BytesIO()
-    p = canvas.Canvas(buffer, pagesize=A4)
+    # Leer el PDF del servidor
+    try:
+        with open(pdf_path, 'rb') as f:
+            pdf_content = f.read()
+    except Exception as e:
+        messages.error(request, f'Error al leer el PDF: {e}')
+        return redirect('mis_creditos')
 
-    # Encabezado simple
-    p.setFont('Helvetica-Bold', 16)
-    p.drawString(72, 800, 'Constancia de Crédito')
+    # Si tanto alumno como docente firmaron, generar una página de firmas y anexarla
+    if credito.firmado_alumno and credito.firmado_docente:
+        try:
+            import io
+            # Crear página de firma con ReportLab
+            try:
+                from reportlab.pdfgen import canvas
+                from reportlab.lib.pagesizes import A4
+            except Exception:
+                raise RuntimeError('ReportLab no está instalado; instala reportlab para generar firmas en PDF')
 
-    # Datos del alumno
-    nombre = request.user.get_full_name() or request.user.username
-    numero_control = request.user.numero_control or request.user.username
+            sig_buf = io.BytesIO()
+            c = canvas.Canvas(sig_buf, pagesize=A4)
+            c.setFont('Helvetica-Bold', 14)
+            c.drawString(72, 800, 'Firmas del Contrato')
+            c.setFont('Helvetica', 12)
+            y = 760
+            # Datos de firma alumno
+            alumno_name = credito.firmado_alumno_por.get_full_name() if credito.firmado_alumno_por else (credito.alumno.get_full_name() if credito.alumno else '')
+            alumno_time = credito.firmado_alumno_en.strftime('%Y-%m-%d %H:%M:%S') if credito.firmado_alumno_en else ''
+            c.drawString(72, y, f'Alumno: {alumno_name}'); y -= 20
+            c.drawString(72, y, f'Firmado en: {alumno_time}'); y -= 30
 
-    p.setFont('Helvetica', 12)
-    p.drawString(72, 760, f'Nombre: {nombre}')
-    p.drawString(72, 740, f'Número de control: {numero_control}')
+            # Datos de firma docente
+            docente_name = credito.firmado_docente_por.get_full_name() if credito.firmado_docente_por else ''
+            docente_time = credito.firmado_docente_en.strftime('%Y-%m-%d %H:%M:%S') if credito.firmado_docente_en else ''
+            c.drawString(72, y, f'Docente: {docente_name}'); y -= 20
+            c.drawString(72, y, f'Firmado en: {docente_time}'); y -= 30
 
-    # Información del crédito
-    p.drawString(72, 710, f'Crédito: {credito.nombre}')
-    p.drawString(72, 690, f'Tipo: {credito.get_tipo_display()}')
-    p.drawString(72, 670, f'Semestre: {credito.semestre}')
-    p.drawString(72, 650, f'Fecha de liberación: {credito.fecha_liberacion or "--"}')
+            # Añadir sello/nota
+            c.setFont('Helvetica-Oblique', 10)
+            c.drawString(72, y, 'Este documento está firmado electrónicamente por alumno y docente según registro interno.')
+            c.showPage(); c.save()
+            sig_buf.seek(0)
 
-    p.showPage()
-    p.save()
+            # Intentar concatenar usando PyPDF2
+            try:
+                from PyPDF2 import PdfReader, PdfWriter
+            except Exception:
+                raise RuntimeError('PyPDF2 no está instalado; instala PyPDF2 para combinar PDFs')
 
-    buffer.seek(0)
+            reader_orig = PdfReader(io.BytesIO(pdf_content))
+            reader_sig = PdfReader(sig_buf)
+            writer = PdfWriter()
+            for p in reader_orig.pages:
+                writer.add_page(p)
+            for p in reader_sig.pages:
+                writer.add_page(p)
+
+            out_buf = io.BytesIO()
+            writer.write(out_buf)
+            pdf_content = out_buf.getvalue()
+        except Exception as e:
+            # Si algo falla, seguimos con el PDF original y registramos advertencia
+            print('No se pudo anexar página de firmas:', e)
+
     # Nombre único por crédito: número de control + id del crédito
+    numero_control = request.user.numero_control or request.user.username
     safe_num = (str(numero_control).replace(' ', '_'))
     filename = f"{safe_num}-credito-{credito.id}.pdf"
     filepath = docs_dir / filename
 
-    # Guardar PDF en archivo del proyecto
+    # Guardar una copia en la carpeta documentos del proyecto para registro
     try:
         with open(filepath, 'wb') as f:
-            f.write(buffer.getvalue())
+            f.write(pdf_content)
     except Exception as e:
-        messages.error(request, f'Error al guardar PDF en el proyecto: {e}')
-        return redirect('mis_creditos')
+        messages.warning(request, f'No se pudo guardar copia en documentos: {e}')
 
     # También guardar una copia en la carpeta 'Documents' del usuario del sistema (si existe)
     try:
@@ -400,21 +446,138 @@ def credito_pdf(request, id_credito):
         user_docs.mkdir(parents=True, exist_ok=True)
         user_filepath = user_docs / filename
         with open(user_filepath, 'wb') as f2:
-            f2.write(buffer.getvalue())
+            f2.write(pdf_content)
     except Exception:
         # No bloquear si no se pudo escribir en Documents; sólo informamos con mensaje opcional
         user_filepath = None
+    # If SMART_CONTRACT is enabled, generate a smart-contract PDF that includes
+    # TEAL sources and metadata. If DEPLOY_PER_CREDITO is True, attempt deploy
+    # and include the returned app_id/doc_hash; otherwise include APP_ID from settings.
+    sc_cfg = getattr(settings, 'SMART_CONTRACT', None) or {}
+    if sc_cfg.get('ENABLED'):
+        try:
+            # Prepare metadata
+            import hashlib
+            from proyecto_creditos.src import SmartContract1
 
-    # Devolver el PDF como respuesta de descarga
+            app_id = sc_cfg.get('APP_ID')
+            doc_hash = hashlib.sha256(pdf_content).digest()
+
+            # If configured to deploy per crédito, attempt to deploy using mnemonics
+            if sc_cfg.get('DEPLOY_PER_CREDITO'):
+                admin_m = sc_cfg.get('ADMIN_MNEMONIC') or None
+                student_m = sc_cfg.get('STUDENT_MNEMONIC') or None
+                officer_m = sc_cfg.get('OFFICER_MNEMONIC') or None
+                try:
+                    deployed_app_id, deployed_doc_hash = SmartContract1.deploy_contract(
+                        admin_m, student_m, officer_m, str(filepath)
+                    )
+                    app_id = deployed_app_id
+                    doc_hash = deployed_doc_hash
+                except Exception as e:
+                    print('Warning: deploy per crédito failed:', e)
+                    messages.warning(request, f'Despliegue del contrato por crédito falló: {e}')
+
+            # Optionally sign on-chain with SIGNER_MNEMONIC
+            signer_m = sc_cfg.get('SIGNER_MNEMONIC')
+            if signer_m and app_id:
+                try:
+                    signer_sk, signer_addr = SmartContract1.load_account(signer_m)
+                    SmartContract1.sign_document(signer_sk, signer_addr, app_id, doc_hash)
+                except Exception as e:
+                    print('Warning: signing failed:', e)
+                    messages.warning(request, f'Firma on-chain fallida: {e}')
+
+            # Build smart-contract PDF with TEAL source
+            try:
+                from reportlab.pdfgen import canvas
+                from reportlab.lib.pagesizes import A4
+            except Exception:
+                messages.error(request, 'ReportLab no está instalado; instala reportlab para generar el contrato en PDF.')
+                return redirect('mis_creditos')
+
+            smart_filename = f"{safe_num}-credito-{credito.id}-smartcontract.pdf"
+            smart_filepath = docs_dir / smart_filename
+            c = canvas.Canvas(str(smart_filepath), pagesize=A4)
+            c.setFont('Helvetica-Bold', 14)
+            c.drawString(72, 800, 'Contrato Inteligente - Información')
+            c.setFont('Helvetica', 11)
+            y = 780
+            meta_lines = [
+                f'Alumno: {request.user.get_full_name() or request.user.username}',
+                f'Número de control: {numero_control}',
+                f'Crédito: {credito.nombre}',
+                f'Tipo: {credito.get_tipo_display()}',
+                f'Semestre: {credito.semestre}',
+                f'Fecha de liberación: {credito.fecha_liberacion or "--"}',
+                f'App ID: {app_id or "(no deploy)"}',
+                f'Doc hash: {doc_hash.hex() if isinstance(doc_hash, (bytes, bytearray)) else str(doc_hash)}',
+            ]
+            for ln in meta_lines:
+                c.drawString(72, y, ln)
+                y -= 16
+                if y < 72:
+                    c.showPage(); y = 800
+
+            # Attach TEAL sources (read-only, do not move files)
+            try:
+                teal_dir = os.path.abspath(os.path.join(os.path.dirname(SmartContract1.__file__), '..', 'teal'))
+                if os.path.isdir(teal_dir):
+                    c.showPage(); c.setFont('Helvetica-Bold', 12); c.drawString(72, 800, 'TEAL Source Files:')
+                    y = 780; c.setFont('Courier', 8)
+                    for fname in sorted(os.listdir(teal_dir)):
+                        if not fname.endswith('.teal'):
+                            continue
+                        path_teal = os.path.join(teal_dir, fname)
+                        c.drawString(72, y, f'--- {fname} ---')
+                        y -= 12
+                        with open(path_teal, 'r', encoding='utf-8', errors='ignore') as tf:
+                            for line in tf:
+                                # wrap long lines
+                                for chunk in [line[i:i+100] for i in range(0, len(line), 100)]:
+                                    c.drawString(72, y, chunk.rstrip())
+                                    y -= 10
+                                    if y < 72:
+                                        c.showPage(); c.setFont('Courier', 8); y = 800
+                        y -= 8
+            except Exception as e:
+                print('No se pudieron adjuntar archivos TEAL:', e)
+
+            c.showPage(); c.save()
+
+            # Save a copy to user's Documents as well
+            try:
+                if smart_filepath.exists():
+                    user_smart = Path.home() / 'Documents' / smart_filepath.name
+                    with open(smart_filepath, 'rb') as srf, open(user_smart, 'wb') as usf:
+                        usf.write(srf.read())
+            except Exception:
+                pass
+
+            # Return the smart-contract PDF
+            try:
+                with open(smart_filepath, 'rb') as sf:
+                    data = sf.read()
+                response = HttpResponse(data, content_type='application/pdf')
+                response['Content-Disposition'] = f'attachment; filename="{smart_filepath.name}"'
+                messages.success(request, f'Contrato inteligente generado: {smart_filepath.name}')
+                return response
+            except Exception as e:
+                messages.error(request, f'Error al preparar la descarga del smart contract: {e}')
+                return redirect('mis_creditos')
+
+        except Exception as e:
+            print('Error al generar contrato inteligente:', e)
+            messages.warning(request, f'No se pudo generar contrato inteligente: {e}')
+
+    # If not enabled or generation failed, return the base PDF
     try:
-        from django.http import HttpResponse
-        buffer.seek(0)
-        response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
+        response = HttpResponse(pdf_content, content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
         if user_filepath:
-            messages.success(request, f'PDF guardado en: {user_filepath}')
+            messages.success(request, f'PDF descargado y guardado en: {user_filepath}')
         else:
-            messages.success(request, f'PDF generado: {filename}')
+            messages.success(request, f'PDF descargado: {filename}')
         return response
     except Exception as e:
         messages.error(request, f'Error al preparar la descarga: {e}')

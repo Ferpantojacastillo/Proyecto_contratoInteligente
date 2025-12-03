@@ -1,0 +1,169 @@
+#pragma version 6
+
+// GLOBAL KEYS
+// "0" document_hash
+// "1" student_addr
+// "2" officer_addr
+// "3" required_signatures
+// "4" student_id
+// "5" current_count
+// "6" signed_flag
+// "7" timestamp_firmado
+// "8" student_signed
+// "9" officer_signed
+
+txn ApplicationID
+int 0
+==
+bz handle_calls
+
+// Creation: store args in global state
+byte "0"
+txna ApplicationArgs 0
+app_global_put
+
+byte "1"
+txna ApplicationArgs 1
+app_global_put
+
+byte "2"
+txna ApplicationArgs 2
+app_global_put
+
+byte "3"
+int 2
+app_global_put
+
+byte "4"
+txna ApplicationArgs 3
+app_global_put
+
+byte "5"
+int 0
+app_global_put
+
+byte "6"
+int 0
+app_global_put
+
+byte "7"
+int 0
+app_global_put
+
+byte "8"
+int 0
+app_global_put
+
+byte "9"
+int 0
+app_global_put
+
+int 1
+return
+
+// --------------------
+handle_calls:
+// Allow only NoOp
+txn OnCompletion
+int NoOp
+==
+assert
+
+// Verify supplied hash == stored hash
+txna ApplicationArgs 0
+byte "0"
+app_global_get
+==
+assert
+
+// Check Sender: student?
+txn Sender
+byte "1"
+app_global_get
+==
+bnz student_flow
+
+// check Sender: officer?
+txn Sender
+byte "2"
+app_global_get
+==
+bnz officer_flow
+
+err
+
+// --------------------
+student_flow:
+// Ensure student has NOT signed yet (student_signed == 0)
+byte "8"
+app_global_get
+int 0
+==
+assert
+
+// mark student_signed = 1
+byte "8"
+int 1
+app_global_put
+
+// increment current_count safely
+byte "5"
+app_global_get
+int 1
++
+dup
+byte "5"
+swap
+app_global_put
+
+b check_finalize
+
+// --------------------
+officer_flow:
+// Ensure officer has NOT signed yet (officer_signed == 0)
+byte "9"
+app_global_get
+int 0
+==
+assert
+
+byte "9"
+int 1
+app_global_put
+
+byte "5"
+app_global_get
+int 1
++
+dup
+byte "5"
+swap
+app_global_put
+
+b check_finalize
+
+// --------------------
+check_finalize:
+byte "5"
+app_global_get
+byte "3"
+app_global_get
+==
+bnz set_signed
+
+// not enough signatures yet
+int 1
+return
+
+set_signed:
+byte "6"
+int 1
+app_global_put
+
+global Round
+byte "7"
+swap
+app_global_put
+
+int 1
+return
